@@ -69,16 +69,16 @@ func Parse() (*Config, error) {
 		fetchLimit    int
 	)
 
-	flag.StringVar(&apiKey, "apikey", "", "WizeBot read API key (overrides WIZEBOT_API_READ env var)")
-	flag.StringVar(&period, "period", defaultPeriod, "Time period: week or month")
-	flag.IntVar(&messageWeight, "message-weight", defaultMessageWeight, "Weight of messages in score (0-100, as percentage)")
-	flag.IntVar(&topN, "top", defaultTop, "Number of top VIPs to display")
-	flag.IntVar(&fetchLimit, "fetch-limit", defaultFetchLimit, "Number of entries to fetch from WizeBot API per ranking (1-100)")
+	flag.StringVar(&apiKey, "apikey", "", "Clé API WizeBot en lecture (remplace la variable WIZEBOT_API_READ)")
+	flag.StringVar(&period, "period", defaultPeriod, "Période : week (semaine) ou month (mois)")
+	flag.IntVar(&messageWeight, "message-weight", defaultMessageWeight, "Poids des messages dans le score (0-100, en pourcentage)")
+	flag.IntVar(&topN, "top", defaultTop, "Nombre de VIP à afficher")
+	flag.IntVar(&fetchLimit, "fetch-limit", defaultFetchLimit, "Nombre d'entrées à récupérer par classement WizeBot (1-100)")
 
 	flag.Usage = usage
 	flag.Parse()
 
-	// Resolution order: flag > env > interactive prompt.
+	// Ordre de résolution : flag > variable d'environnement > saisie interactive.
 	if apiKey == "" {
 		apiKey = os.Getenv("WIZEBOT_API_READ")
 	}
@@ -86,14 +86,14 @@ func Parse() (*Config, error) {
 		var err error
 		apiKey, err = promptAPIKey()
 		if err != nil {
-			return nil, fmt.Errorf("reading API key: %w", err)
+			return nil, fmt.Errorf("lecture de la clé API : %w", err)
 		}
 	}
 
-	// VIP file resolution:
-	// 1. Positional argument if provided.
-	// 2. vips.txt next to the running executable.
-	// 3. Hard error.
+	// Résolution du fichier VIP :
+	// 1. Argument positionnel fourni en ligne de commande.
+	// 2. vips.txt dans le même dossier que le binaire (silencieux).
+	// 3. Erreur explicite.
 	var vipFile string
 	if flag.NArg() >= 1 {
 		vipFile = flag.Arg(0)
@@ -101,11 +101,10 @@ func Parse() (*Config, error) {
 		vipFile = vipFileNextToExecutable()
 		if vipFile == "" {
 			return nil, fmt.Errorf(
-				"missing VIP file: pass it as an argument or place a %q file next to the program",
+				"fichier VIP manquant : passez-le en argument ou placez un fichier %q à côté du programme",
 				defaultVIPFile,
 			)
 		}
-		fmt.Fprintf(os.Stderr, "Fichier VIP non spécifié, utilisation de : %s\n", vipFile)
 	}
 
 	return validate(&Config{
@@ -143,17 +142,16 @@ func promptAPIKey() (string, error) {
 	fmt.Fprint(os.Stderr, "Clé API WizeBot [R] : ")
 
 	raw, err := term.ReadPassword(int(os.Stderr.Fd()))
-	fmt.Fprintln(os.Stderr) // newline after the hidden input
+	fmt.Fprintln(os.Stderr)
 	if err != nil {
 		return "", err
 	}
 
 	key := strings.TrimSpace(string(raw))
 	if key == "" {
-		return "", errors.New("API key cannot be empty")
+		return "", errors.New("la clé API ne peut pas être vide")
 	}
 
-	// Show masked confirmation: one '*' per character.
 	mask := strings.Repeat("*", len(key))
 	fmt.Fprintf(os.Stderr, "Clé saisie : %s (%d caractères)\n", mask, len(key))
 	return key, nil
@@ -161,41 +159,41 @@ func promptAPIKey() (string, error) {
 
 func validate(c *Config) (*Config, error) {
 	if c.APIKey == "" {
-		return nil, errors.New("API key is required: use -apikey flag or set WIZEBOT_API_READ environment variable")
+		return nil, errors.New("clé API requise : utilisez -apikey ou définissez WIZEBOT_API_READ")
 	}
 	if !c.Period.Valid() {
-		return nil, fmt.Errorf("invalid period %q: must be \"week\" or \"month\"", c.Period)
+		return nil, fmt.Errorf("période invalide %q : doit être \"week\" ou \"month\"", c.Period)
 	}
 	if c.MessageWeightPct < 0 || c.MessageWeightPct > 100 {
-		return nil, fmt.Errorf("invalid -message-weight %d: must be between 0 and 100", c.MessageWeightPct)
+		return nil, fmt.Errorf("-message-weight %d invalide : doit être entre 0 et 100", c.MessageWeightPct)
 	}
 	if c.TopN < 1 {
-		return nil, fmt.Errorf("invalid -top %d: must be >= 1", c.TopN)
+		return nil, fmt.Errorf("-top %d invalide : doit être >= 1", c.TopN)
 	}
 	if c.FetchLimit < 1 || c.FetchLimit > maxFetchLimit {
-		return nil, fmt.Errorf("invalid -fetch-limit %d: must be between 1 and %d", c.FetchLimit, maxFetchLimit)
+		return nil, fmt.Errorf("-fetch-limit %d invalide : doit être entre 1 et %d", c.FetchLimit, maxFetchLimit)
 	}
 	return c, nil
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `Usage: wz-top-vip [flags] [vip-file]
+	fmt.Fprintf(os.Stderr, `Utilisation : wz-top-vip [options] [fichier-vip]
 
-  [vip-file]  Path to a text file containing one Twitch username per line
-              (VIP list). Optional: if omitted, the program looks for a
-              vips.txt file next to the executable.
+  [fichier-vip]  Chemin vers un fichier texte contenant un pseudo Twitch par ligne
+                 (liste des VIPs). Optionnel : si absent, le programme cherche
+                 automatiquement un fichier vips.txt à côté du programme.
 
-Flags:
+Options :
 `)
 	flag.PrintDefaults()
 	fmt.Fprintf(os.Stderr, `
-Environment variables:
-  WIZEBOT_API_READ  WizeBot read API key (used if -apikey is not set)
+Variables d'environnement :
+  WIZEBOT_API_READ  Clé API WizeBot en lecture (utilisée si -apikey est absent)
 
-API key location:
+Obtenir la clé API :
   %s
 
-Examples:
+Exemples :
   wz-top-vip vips.txt
   wz-top-vip -apikey xxxxx -period week -message-weight 70 -top 5 vips.txt
 `, apiKeyURL)

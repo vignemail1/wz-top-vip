@@ -1,14 +1,13 @@
-// Command wz-top-vip computes a weighted ranking of VIP viewers on a Twitch
-// channel using WizeBot's uptime and message ranking APIs.
+// Command wz-top-vip calcule un classement pondéré des VIP d'une chaîne Twitch
+// à partir des tops uptime et messages de l'API WizeBot.
 //
-// Usage:
+// Utilisation :
 //
-//	wz-top-vip [flags] [vip-file]
+//	wz-top-vip [options] [fichier-vip]
 //
-// The VIP file must contain one Twitch username per line.
-// If omitted, the program looks for vips.txt next to the executable.
-// The WizeBot read API key is provided via -apikey or the WIZEBOT_API_READ
-// environment variable.
+// Le fichier VIP doit contenir un pseudo Twitch par ligne.
+// Si absent, le programme cherche vips.txt dans le même dossier que le binaire.
+// La clé API WizeBot en lecture est fournie via -apikey ou WIZEBOT_API_READ.
 package main
 
 import (
@@ -38,8 +37,8 @@ func main() {
 func run() error {
 	cfg, err := config.Parse()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n\n", err)
-		fmt.Fprintf(os.Stderr, "Run with -help for usage.\n")
+		fmt.Fprintf(os.Stderr, "erreur : %v\n\n", err)
+		fmt.Fprintf(os.Stderr, "Lancez le programme avec -help pour afficher l'aide.\n")
 		return err
 	}
 
@@ -53,16 +52,16 @@ func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	fmt.Fprintf(os.Stderr, "Récupération du top uptime (%s, limit=%d)...\n", cfg.Period, cfg.FetchLimit)
+	fmt.Fprintf(os.Stderr, "Récupération du top uptime (%s, limite=%d)...\n", cfg.Period, cfg.FetchLimit)
 	uptimeEntries, err := client.FetchTop(ctx, wizebot.TopTypeUptime, string(cfg.Period), cfg.FetchLimit)
 	if err != nil {
-		return fmt.Errorf("fetching uptime top: %w", err)
+		return fmt.Errorf("récupération du top uptime : %w", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "Récupération du top messages (%s, limit=%d)...\n", cfg.Period, cfg.FetchLimit)
+	fmt.Fprintf(os.Stderr, "Récupération du top messages (%s, limite=%d)...\n", cfg.Period, cfg.FetchLimit)
 	messageEntries, err := client.FetchTop(ctx, wizebot.TopTypeMessage, string(cfg.Period), cfg.FetchLimit)
 	if err != nil {
-		return fmt.Errorf("fetching message top: %w", err)
+		return fmt.Errorf("récupération du top messages : %w", err)
 	}
 
 	result := scoring.Compute(
@@ -77,10 +76,10 @@ func run() error {
 	return nil
 }
 
-// pauseIfInteractive waits for the user to press Enter before exiting, but
-// only when stdin is an interactive terminal (i.e. not a pipe or redirect).
-// This prevents the console window from closing immediately when the program
-// is launched by double-clicking on Windows.
+// pauseIfInteractive attend que l'utilisateur appuie sur Entrée avant de quitter,
+// uniquement lorsque stdin est un terminal interactif (pas un pipe ni une
+// redirection). Cela évite que la fenêtre console se ferme immédiatement
+// lors d'un double-clic depuis l'explorateur Windows.
 func pauseIfInteractive() {
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		return

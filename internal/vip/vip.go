@@ -8,13 +8,13 @@ import (
 	"strings"
 )
 
-// LoadFile reads a newline-separated list of Twitch usernames from path.
-// Empty lines and lines starting with '#' are ignored.
-// All usernames are lowercased and trimmed for consistent comparison.
+// LoadFile lit une liste de pseudos Twitch (un par ligne) depuis le fichier path.
+// Les lignes vides et celles commençant par '#' sont ignorées.
+// Tous les pseudos sont mis en minuscules pour une comparaison uniforme.
 func LoadFile(path string) (map[string]struct{}, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("opening VIP file %q: %w", path, err)
+		return nil, fmt.Errorf("ouverture du fichier VIP %q : %w", path, err)
 	}
 	defer f.Close()
 
@@ -28,10 +28,10 @@ func LoadFile(path string) (map[string]struct{}, error) {
 		vips[strings.ToLower(line)] = struct{}{}
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("reading VIP file %q: %w", path, err)
+		return nil, fmt.Errorf("lecture du fichier VIP %q : %w", path, err)
 	}
 	if len(vips) == 0 {
-		return nil, fmt.Errorf("VIP file %q contains no valid usernames", path)
+		return nil, fmt.Errorf("le fichier VIP %q ne contient aucun pseudo valide", path)
 	}
 	return vips, nil
 }

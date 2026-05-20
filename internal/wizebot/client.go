@@ -33,7 +33,7 @@ func (s *stringFloat64) UnmarshalJSON(b []byte) error {
 	raw := strings.Trim(string(b), `"`)
 	v, err := strconv.ParseFloat(raw, 64)
 	if err != nil {
-		return fmt.Errorf("stringFloat64: cannot parse %q: %w", raw, err)
+		return fmt.Errorf("stringFloat64 : impossible de convertir %q : %w", raw, err)
 	}
 	*s = stringFloat64(v)
 	return nil
@@ -82,25 +82,25 @@ func (c *Client) FetchTop(ctx context.Context, topType TopType, period string, l
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("building request for %s/%s: %w", topType, period, err)
+		return nil, fmt.Errorf("construction de la requête %s/%s : %w", topType, period, err)
 	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("fetching %s/%s: %w", topType, period, err)
+		return nil, fmt.Errorf("appel API %s/%s : %w", topType, period, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("WizeBot API returned HTTP %d for %s/%s", resp.StatusCode, topType, period)
+		return nil, fmt.Errorf("l'API WizeBot a retourné HTTP %d pour %s/%s", resp.StatusCode, topType, period)
 	}
 
 	var payload rankingResponse
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return nil, fmt.Errorf("decoding response for %s/%s: %w", topType, period, err)
+		return nil, fmt.Errorf("décodage de la réponse %s/%s : %w", topType, period, err)
 	}
 	if !payload.Success {
-		return nil, fmt.Errorf("WizeBot API reported failure for %s/%s", topType, period)
+		return nil, fmt.Errorf("l'API WizeBot a signalé une erreur pour %s/%s", topType, period)
 	}
 
 	entries := make([]RankingEntry, len(payload.List))
