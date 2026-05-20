@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/term"
@@ -19,7 +20,8 @@ const (
 	defaultFetchLimit    = 100
 	maxFetchLimit        = 100
 
-	apiKeyURL = "https://panel.wizebot.tv/development_api_management#"
+	defaultVIPFile = "vips.txt"
+	apiKeyURL      = "https://panel.wizebot.tv/development_api_management#"
 )
 
 // Period represents a WizeBot ranking time window.
@@ -88,10 +90,23 @@ func Parse() (*Config, error) {
 		}
 	}
 
-	if flag.NArg() < 1 {
-		return nil, errors.New("missing required argument: path to VIP file")
+	// VIP file resolution:
+	// 1. Positional argument if provided.
+	// 2. vips.txt next to the running executable.
+	// 3. Hard error.
+	var vipFile string
+	if flag.NArg() >= 1 {
+		vipFile = flag.Arg(0)
+	} else {
+		vipFile = vipFileNextToExecutable()
+		if vipFile == "" {
+			return nil, fmt.Errorf(
+				"missing VIP file: pass it as an argument or place a %q file next to the program",
+				defaultVIPFile,
+			)
+		}
+		fmt.Fprintf(os.Stderr, "Fichier VIP non spécifié, utilisation de : %s\n", vipFile)
 	}
-	vipFile := flag.Arg(0)
 
 	return validate(&Config{
 		APIKey:           apiKey,
@@ -104,6 +119,20 @@ func Parse() (*Config, error) {
 	})
 }
 
+// vipFileNextToExecutable returns the path to vips.txt located in the same
+// directory as the running executable, or an empty string if not found.
+func vipFileNextToExecutable() string {
+	exePath, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	candidate := filepath.Join(filepath.Dir(exePath), defaultVIPFile)
+	if _, err := os.Stat(candidate); err == nil {
+		return candidate
+	}
+	return ""
+}
+
 // promptAPIKey displays instructions and reads the API key with masked echo.
 func promptAPIKey() (string, error) {
 	fmt.Fprintln(os.Stderr)
@@ -113,12 +142,6 @@ func promptAPIKey() (string, error) {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprint(os.Stderr, "Clé API WizeBot [R] : ")
 
-	// term.ReadPassword puts the terminal in raw mode, reads until Enter,
-	// then restores the previous state. Characters are not echoed by the
-	// terminal itself; we print a '*' per byte received instead.
-	// As term.ReadPassword suppresses all echo we cannot intercept
-	// individual keystrokes portably, so we fall back to a single-pass
-	// read and show a fixed mask line after confirmation.
 	raw, err := term.ReadPassword(int(os.Stderr.Fd()))
 	fmt.Fprintln(os.Stderr) // newline after the hidden input
 	if err != nil {
@@ -156,9 +179,11 @@ func validate(c *Config) (*Config, error) {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `Usage: wz-top-vip [flags] <vip-file>
+	fmt.Fprintf(os.Stderr, `Usage: wz-top-vip [flags] [vip-file]
 
-  <vip-file>  Path to a text file containing one Twitch username per line (VIP list).
+  [vip-file]  Path to a text file containing one Twitch username per line
+              (VIP list). Optional: if omitted, the program looks for a
+              vips.txt file next to the executable.
 
 Flags:
 `)

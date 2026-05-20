@@ -3,18 +3,22 @@
 //
 // Usage:
 //
-//	wz-top-vip [flags] <vip-file>
+//	wz-top-vip [flags] [vip-file]
 //
 // The VIP file must contain one Twitch username per line.
+// If omitted, the program looks for vips.txt next to the executable.
 // The WizeBot read API key is provided via -apikey or the WIZEBOT_API_READ
 // environment variable.
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"time"
+
+	"golang.org/x/term"
 
 	"github.com/vignemail1/wz-top-vip/internal/config"
 	"github.com/vignemail1/wz-top-vip/internal/output"
@@ -24,8 +28,9 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+	err := run()
+	pauseIfInteractive()
+	if err != nil {
 		os.Exit(1)
 	}
 }
@@ -35,7 +40,7 @@ func run() error {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n\n", err)
 		fmt.Fprintf(os.Stderr, "Run with -help for usage.\n")
-		os.Exit(2)
+		return err
 	}
 
 	vips, err := vip.LoadFile(cfg.VIPFile)
@@ -70,4 +75,17 @@ func run() error {
 
 	output.Print(os.Stdout, string(cfg.Period), result, cfg.TopN)
 	return nil
+}
+
+// pauseIfInteractive waits for the user to press Enter before exiting, but
+// only when stdin is an interactive terminal (i.e. not a pipe or redirect).
+// This prevents the console window from closing immediately when the program
+// is launched by double-clicking on Windows.
+func pauseIfInteractive() {
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		return
+	}
+	fmt.Fprint(os.Stderr, "\nAppuyez sur Entrée pour quitter...")
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
 }
