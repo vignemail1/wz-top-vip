@@ -30,8 +30,8 @@ La clé peut être fournie de trois façons (par ordre de priorité) :
 
 | Méthode | Exemple |
 |---|---|
-| Flag `-apikey` | `wz-top-vip -apikey VOTRE_CLE vips.txt` |
-| Variable d'environnement | `export WIZEBOT_API_READ=VOTRE_CLE` |
+| Option `-apikey` | `wz-top-vip -apikey VOTRE_CLE vips.txt` |
+| Variable d'environnement | `WIZEBOT_API_READ=VOTRE_CLE` |
 | Saisie interactive | Le programme la demande au lancement si absente |
 
 Lors de la saisie interactive, les caractères sont masqués et une confirmation
@@ -56,8 +56,8 @@ Les VIPs actuels de cette chaîne sont : pseudo1, pseudo2, pseudo3, pseudo4.
 
 ### Créer le fichier `vips.txt`
 
-Créez un fichier texte nommé `vips.txt` (ou tout autre nom de votre choix)
-avec **un pseudo par ligne**, en reprenant exactement les pseudos affichés par Twitch :
+Créez un fichier texte nommé `vips.txt` avec **un pseudo par ligne**,
+en reprenant exactement les pseudos affichés par Twitch :
 
 ```
 pseudo1
@@ -101,102 +101,34 @@ Téléchargez l'archive correspondant à votre système d'exploitation :
 
 ### Décompresser l'archive
 
+**Windows — Explorateur de fichiers :**
+
+Faites un clic droit sur le fichier `.zip` → **Extraire tout...**
+Choisissez un dossier facile d'accès (par exemple `Bureau` ou `Téléchargements`).
+
 **Linux / macOS — Terminal :**
 
 ```bash
 tar -xzf wz-top-vip-linux-amd64.tar.gz    # Linux
 tar -xzf wz-top-vip-darwin-arm64.tar.gz   # macOS
-```
-
-**Windows — Explorateur de fichiers :**
-
-Faites un clic droit sur le fichier `.zip` → **Extraire tout...**
-
-Ou depuis PowerShell :
-
-```powershell
-Expand-Archive wz-top-vip-windows-amd64.zip .
-```
-
-### Rendre le binaire exécutable (Linux / macOS)
-
-```bash
-chmod +x wz-top-vip-linux-amd64    # Linux
-chmod +x wz-top-vip-darwin-arm64   # macOS
+chmod +x wz-top-vip-linux-amd64            # Linux
+chmod +x wz-top-vip-darwin-arm64           # macOS
 ```
 
 ---
 
-## Utilisation
+## Utilisation sous Windows
 
-### Ouvrir un terminal
+### Méthode rapide — double-clic
 
-- **Linux** : `Ctrl+Alt+T` ou recherchez « Terminal » dans vos applications
-- **macOS** : `Cmd+Espace` → tapez `Terminal` → Entrée
-- **Windows** : `Win+R` → tapez `powershell` → Entrée  
-  *(ou cherchez « PowerShell » dans le menu Démarrer)*
+Cette méthode ne nécessite aucune connaissance technique.
 
-Placez-vous dans le dossier contenant le binaire et votre fichier `vips.txt` :
-
-```bash
-cd ~/Téléchargements    # adaptez selon votre dossier
-```
-
-### Afficher l'aide
-
-```bash
-# Linux
-./wz-top-vip-linux-amd64 -help
-
-# macOS
-./wz-top-vip-darwin-arm64 -help
-
-# Windows (PowerShell)
-.\wz-top-vip-windows-amd64.exe -help
-```
-
-Sortie :
-
-```
-Usage: wz-top-vip [flags] <vip-file>
-
-  <vip-file>  Path to a text file containing one Twitch username per line (VIP list).
-
-Flags:
-  -apikey string
-        WizeBot read API key (overrides WIZEBOT_API_READ env var)
-  -fetch-limit int
-        Number of entries to fetch from WizeBot API per ranking (1-100) (default 100)
-  -message-weight int
-        Weight of messages in score (0-100, as percentage) (default 50)
-  -period string
-        Time period: week or month (default "month")
-  -top int
-        Number of top VIPs to display (default 3)
-
-Environment variables:
-  WIZEBOT_API_READ  WizeBot read API key (used if -apikey is not set)
-
-API key location:
-  https://panel.wizebot.tv/development_api_management#
-```
-
-### Lancer le programme
-
-**Exemple minimal** (top 3 du mois, poids 50 % / 50 %) :
-
-```bash
-# Linux
-./wz-top-vip-linux-amd64 vips.txt
-
-# macOS
-./wz-top-vip-darwin-arm64 vips.txt
-
-# Windows (PowerShell)
-.\wz-top-vip-windows-amd64.exe vips.txt
-```
-
-Si la clé API n'est pas configurée, le programme la demande :
+1. Extrayez le `.zip` dans un dossier (voir section [Installation](#installation))
+2. Placez votre fichier `vips.txt` **dans le même dossier** que le fichier
+   `wz-top-vip-windows-amd64.exe`
+3. **Double-cliquez** sur `wz-top-vip-windows-amd64.exe`
+4. Une fenêtre noire (console) s'ouvre
+5. Si la clé API n'est pas encore configurée, le programme la demande :
 
 ```
 Aucune clé API WizeBot trouvée (-apikey / WIZEBOT_API_READ).
@@ -207,22 +139,137 @@ Clé API WizeBot [R] : ****************
 Clé saisie : **************** (16 caractères)
 ```
 
-**Exemple avancé** — top 5 de la semaine, 70 % messages / 30 % uptime :
+6. Saisissez votre clé API (les caractères ne s'affichent pas) puis appuyez sur **Entrée**
+7. Le classement s'affiche
+8. Appuyez sur **Entrée** pour fermer la fenêtre
 
-```bash
-./wz-top-vip-darwin-arm64 -period week -message-weight 70 -top 5 vips.txt
+> **Astuce :** Pour ne plus avoir à saisir la clé à chaque lancement, configurez-la
+> une fois en variable d'environnement Windows (voir la méthode avancée ci-dessous).
+
+---
+
+### Méthode avancée — PowerShell
+
+Utilisez cette méthode pour passer des options (période, poids, top N...)
+ou pour configurer la clé API de façon permanente.
+
+#### Ouvrir PowerShell dans le bon dossier
+
+Dans l'Explorateur de fichiers, naviguez jusqu'au dossier contenant le `.exe`,
+puis dans la barre d'adresse tapez `powershell` et appuyez sur **Entrée**.
+
+Ou ouvrez PowerShell depuis le menu Démarrer et naviguez :
+
+```powershell
+cd C:\Users\VotreNom\Downloads\wz-top-vip
 ```
 
-**Avec la clé en variable d'environnement (recommandé) :**
+#### Afficher l'aide
 
-```bash
-# Linux / macOS
-export WIZEBOT_API_READ=VOTRE_CLE
-./wz-top-vip-darwin-arm64 vips.txt
+```powershell
+.\wz-top-vip-windows-amd64.exe -help
+```
 
-# Windows (PowerShell)
+#### Lancement simple (fichier `vips.txt` dans le même dossier)
+
+```powershell
+.\wz-top-vip-windows-amd64.exe
+```
+
+#### Lancement avec un fichier VIP spécifique
+
+```powershell
+.\wz-top-vip-windows-amd64.exe C:\Users\VotreNom\Documents\mes-vips.txt
+```
+
+#### Passer la clé API en argument (usage ponctuel)
+
+```powershell
+.\wz-top-vip-windows-amd64.exe -apikey VOTRE_CLE vips.txt
+```
+
+#### Configurer la clé API pour la session PowerShell en cours
+
+```powershell
 $env:WIZEBOT_API_READ = "VOTRE_CLE"
 .\wz-top-vip-windows-amd64.exe vips.txt
+```
+
+#### Configurer la clé API de façon permanente (pour tous les lancements futurs)
+
+```powershell
+[System.Environment]::SetEnvironmentVariable("WIZEBOT_API_READ", "VOTRE_CLE", "User")
+```
+
+Fermez et réouvrez PowerShell (ou double-cliquez sur le `.exe`) pour que le
+changement soit pris en compte.
+
+#### Exemples avec options
+
+```powershell
+# Top 5 VIP de la semaine
+.\wz-top-vip-windows-amd64.exe -period week -top 5 vips.txt
+
+# Top 3 du mois, 70 % messages / 30 % uptime
+.\wz-top-vip-windows-amd64.exe -message-weight 70 vips.txt
+
+# Top 10 de la semaine, 100 % uptime (ignorer les messages)
+.\wz-top-vip-windows-amd64.exe -period week -message-weight 0 -top 10 vips.txt
+```
+
+---
+
+## Utilisation sous Linux / macOS
+
+### Ouvrir un terminal
+
+- **Linux** : `Ctrl+Alt+T` ou recherchez « Terminal » dans vos applications
+- **macOS** : `Cmd+Espace` → tapez `Terminal` → Entrée
+
+Placez-vous dans le dossier contenant le binaire :
+
+```bash
+cd ~/Téléchargements/wz-top-vip    # adaptez selon votre dossier
+```
+
+### Afficher l'aide
+
+```bash
+./wz-top-vip-linux-amd64 -help     # Linux
+./wz-top-vip-darwin-arm64 -help    # macOS
+```
+
+### Lancement simple
+
+```bash
+# Avec vips.txt dans le même dossier
+./wz-top-vip-linux-amd64
+
+# Avec un fichier VIP spécifique
+./wz-top-vip-darwin-arm64 ~/Documents/mes-vips.txt
+```
+
+### Clé API via variable d'environnement (recommandé)
+
+```bash
+export WIZEBOT_API_READ="VOTRE_CLE"
+./wz-top-vip-linux-amd64 vips.txt
+```
+
+Pour la rendre permanente, ajoutez la ligne `export WIZEBOT_API_READ="VOTRE_CLE"`
+dans votre `~/.bashrc`, `~/.zshrc` ou `~/.profile`.
+
+### Exemples avec options
+
+```bash
+# Top 5 VIP de la semaine
+./wz-top-vip-linux-amd64 -period week -top 5 vips.txt
+
+# Top 3 du mois, 70 % messages / 30 % uptime
+./wz-top-vip-darwin-arm64 -message-weight 70 vips.txt
+
+# Top 10 de la semaine, 100 % uptime
+./wz-top-vip-linux-amd64 -period week -message-weight 0 -top 10 vips.txt
 ```
 
 ---
@@ -257,12 +304,12 @@ Top 3 VIP (sur 12 VIP présents dans les tops)
 
 ---
 
-## Flags disponibles
+## Options disponibles
 
-| Flag | Défaut | Description |
+| Option | Défaut | Description |
 |---|---|---|
 | `-apikey` | — | Clé API WizeBot [R] (sinon `WIZEBOT_API_READ`) |
-| `-period` | `month` | Période : `week` ou `month` |
+| `-period` | `month` | Période : `week` (semaine) ou `month` (mois) |
 | `-message-weight` | `50` | Poids des messages dans le score (0–100, en %) |
 | `-top` | `3` | Nombre de VIP à afficher |
 | `-fetch-limit` | `100` | Entrées récupérées par top API (max 100) |
