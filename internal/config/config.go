@@ -7,6 +7,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
+
+	"golang.org/x/term"
 )
 
 const (
@@ -15,6 +18,8 @@ const (
 	defaultTop           = 3
 	defaultFetchLimit    = 100
 	maxFetchLimit        = 100
+
+	apiKeyURL = "https://panel.wizebot.tv/development_api_management#"
 )
 
 // Period represents a WizeBot ranking time window.
@@ -52,7 +57,7 @@ func (c *Config) UptimeWeight() float64 {
 }
 
 // Parse parses os.Args, resolves the API key from flag or environment,
-// and validates all parameters. It returns a ready-to-use Config or an error.
+// prompts interactively if still missing, and validates all parameters.
 func Parse() (*Config, error) {
 	var (
 		apiKey        string
@@ -71,8 +76,16 @@ func Parse() (*Config, error) {
 	flag.Usage = usage
 	flag.Parse()
 
+	// Resolution order: flag > env > interactive prompt.
 	if apiKey == "" {
 		apiKey = os.Getenv("WIZEBOT_API_READ")
+	}
+	if apiKey == "" {
+		var err error
+		apiKey, err = promptAPIKey()
+		if err != nil {
+			return nil, fmt.Errorf("reading API key: %w", err)
+		}
 	}
 
 	if flag.NArg() < 1 {
@@ -89,6 +102,38 @@ func Parse() (*Config, error) {
 		TopN:             topN,
 		FetchLimit:       fetchLimit,
 	})
+}
+
+// promptAPIKey displays instructions and reads the API key with masked echo.
+func promptAPIKey() (string, error) {
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Aucune clé API WizeBot trouvée (-apikey / WIZEBOT_API_READ).")
+	fmt.Fprintln(os.Stderr, "Vous pouvez obtenir votre clé API [R] (lecture) ici :")
+	fmt.Fprintln(os.Stderr, " "+apiKeyURL)
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprint(os.Stderr, "Clé API WizeBot [R] : ")
+
+	// term.ReadPassword puts the terminal in raw mode, reads until Enter,
+	// then restores the previous state. Characters are not echoed by the
+	// terminal itself; we print a '*' per byte received instead.
+	// As term.ReadPassword suppresses all echo we cannot intercept
+	// individual keystrokes portably, so we fall back to a single-pass
+	// read and show a fixed mask line after confirmation.
+	raw, err := term.ReadPassword(int(os.Stderr.Fd()))
+	fmt.Fprintln(os.Stderr) // newline after the hidden input
+	if err != nil {
+		return "", err
+	}
+
+	key := strings.TrimSpace(string(raw))
+	if key == "" {
+		return "", errors.New("API key cannot be empty")
+	}
+
+	// Show masked confirmation: one '*' per character.
+	mask := strings.Repeat("*", len(key))
+	fmt.Fprintf(os.Stderr, "Clé saisie : %s (%d caractères)\n", mask, len(key))
+	return key, nil
 }
 
 func validate(c *Config) (*Config, error) {
@@ -122,8 +167,11 @@ Flags:
 Environment variables:
   WIZEBOT_API_READ  WizeBot read API key (used if -apikey is not set)
 
+API key location:
+  %s
+
 Examples:
   wz-top-vip vips.txt
   wz-top-vip -apikey xxxxx -period week -message-weight 70 -top 5 vips.txt
-`)
+`, apiKeyURL)
 }
