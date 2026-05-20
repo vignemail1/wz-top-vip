@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -22,17 +24,39 @@ const (
 	TopTypeMessage TopType = "message"
 )
 
+// stringFloat64 is a float64 that unmarshals from either a JSON number or a
+// JSON string (e.g. "1234" or "1234.5"). The WizeBot API returns value as a
+// string-encoded number.
+type stringFloat64 float64
+
+func (s *stringFloat64) UnmarshalJSON(b []byte) error {
+	raw := strings.Trim(string(b), `"`)
+	v, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return fmt.Errorf("stringFloat64: cannot parse %q: %w", raw, err)
+	}
+	*s = stringFloat64(v)
+	return nil
+}
+
+// rawRankingEntry is used only for JSON decoding; its Value tolerates strings.
+type rawRankingEntry struct {
+	UserName string        `json:"user_name"`
+	UserUID  string        `json:"user_uid"`
+	Value    stringFloat64 `json:"value"`
+}
+
 // RankingEntry is a single entry returned by the WizeBot ranking API.
 type RankingEntry struct {
-	UserName string  `json:"user_name"`
-	UserUID  string  `json:"user_uid"`
-	Value    float64 `json:"value"`
+	UserName string
+	UserUID  string
+	Value    float64
 }
 
 // rankingResponse is the raw API response envelope.
 type rankingResponse struct {
-	Success bool           `json:"success"`
-	List    []RankingEntry `json:"list"`
+	Success bool              `json:"success"`
+	List    []rawRankingEntry `json:"list"`
 }
 
 // Client wraps HTTP calls to the WizeBot ranking API.
@@ -79,5 +103,13 @@ func (c *Client) FetchTop(ctx context.Context, topType TopType, period string, l
 		return nil, fmt.Errorf("WizeBot API reported failure for %s/%s", topType, period)
 	}
 
-	return payload.List, nil
+	entries := make([]RankingEntry, len(payload.List))
+	for i, r := range payload.List {
+		entries[i] = RankingEntry{
+			UserName: r.UserName,
+			UserUID:  r.UserUID,
+			Value:    float64(r.Value),
+		}
+	}
+	return entries, nil
 }
