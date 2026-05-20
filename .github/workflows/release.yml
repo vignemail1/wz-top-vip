@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            artifact: wz-top-vip-linux-amd64
+            archive: wz-top-vip-linux-amd64.tar.gz
+          - goos: windows
+            goarch: amd64
+            artifact: wz-top-vip-windows-amd64.exe
+            archive: wz-top-vip-windows-amd64.zip
+          - goos: darwin
+            goarch: arm64
+            artifact: wz-top-vip-darwin-arm64
+            archive: wz-top-vip-darwin-arm64.tar.gz
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          go build \
+            -trimpath \
+            -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+            -o dist/${{ matrix.artifact }} \
+            ./cmd/wz-top-vip
+
+      - name: Archive (tar.gz — Linux / macOS)
+        if: matrix.goos != 'windows'
+        run: |
+          tar -czf dist/${{ matrix.archive }} \
+            -C dist ${{ matrix.artifact }} \
+            README.md
+
+      - name: Archive (zip — Windows)
+        if: matrix.goos == 'windows'
+        run: |
+          cd dist
+          zip ${{ matrix.archive }} ${{ matrix.artifact }}
+          cd ..
+          zip -u dist/${{ matrix.archive }} README.md
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive }}
+          path: dist/${{ matrix.archive }}
+          retention-days: 1
+
+  release:
+    name: GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum *.tar.gz *.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/SHA256SUMS.txt
